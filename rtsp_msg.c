@@ -24,8 +24,10 @@ void *rtsp_mem_alloc(int size)
 
 void rtsp_mem_free(void *ptr)
 {
-    if (ptr)
+    if (ptr) {
         free(ptr);
+        ptr = NULL;
+    }
 }
 
 void *rtsp_mem_dup(const void *ptr, int size)

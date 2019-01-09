@@ -98,6 +98,7 @@ void streamq_free(struct stream_queue *q)
 {
     if (q) {
         free(q);
+        q = NULL;
     }
 }
 

@@ -166,6 +166,7 @@ static void __free_demo(struct rtsp_demo *d)
 {
     if (d) {
         free(d);
+        d = NULL;
     }
 }
 
@@ -189,6 +190,7 @@ static void __free_session(struct rtsp_session *s)
         struct rtsp_demo *d = s->demo;
         TAILQ_REMOVE(&d->sessions_qhead, s, demo_entry);
         free(s);
+        s = NULL;
     }
 }
 
@@ -303,15 +305,16 @@ rtsp_demo_handle rtsp_new_demo(int port)
 
     d->sockfd = sockfd;
 
+    info("rtsp server demo starting on port %d\n", port);
+
 #ifdef __LINUX__
     if (pthread_create(&d->thr, NULL, __do_event, (void *)d) != 0) {
-        err("create do_event thread failed\n");
+        err("do event thread create failed, call |rtsp_do_event| yourself\n");
         d->thr = 0;
     }
     signal(SIGPIPE, SIG_IGN); // rtsp over tcp will send |EPIPE| signal
 #endif
 
-    info("rtsp server demo starting on port %d\n", port);
     return (rtsp_demo_handle)d;
 }
 
@@ -516,6 +519,7 @@ rtsp_session_handle rtsp_new_session(rtsp_demo_handle demo, const char *path)
 fail:
     if (s) {
         free(s);
+        s = NULL;
     }
     return NULL;
 }
@@ -531,20 +535,20 @@ rtsp_session_handle create_rtsp_session(rtsp_demo_handle demo, const char *path)
     rtsp_session_handle session;
     session = rtsp_new_session(demo, path);
 
-    rtsp_set_video(session, RTSP_CODEC_ID_VIDEO_H264, NULL, 0);
+    // rtsp_set_video(session, RTSP_CODEC_ID_VIDEO_H264, NULL, 0);
     //rtsp_set_audio(session, RTSP_CODEC_ID_AUDIO_G711A, NULL, 0);
 
     return session;
 }
 
 
-#define RTP_MAX_PKTSIZ    ((1500-42)/4*4)
-#define VRTP_MAX_NBPKTS    (300)
-#define ARTP_MAX_NBPKTS    (10)
-#define VRTP_PT_ID        (96)
-#define ARTP_PT_ID        (97)
-#define VRTSP_SUBPATH    "track1"
-#define ARTSP_SUBPATH    "track2"
+#define RTP_MAX_PKTSIZ	((1500-42)/4*4)
+#define VRTP_MAX_NBPKTS	(600)
+#define ARTP_MAX_NBPKTS	(10)
+#define VRTP_PT_ID		(96)
+#define ARTP_PT_ID		(97)
+#define VRTSP_SUBPATH	"track1"
+#define ARTSP_SUBPATH	"track2"
 
 int rtsp_set_video(rtsp_session_handle session, int codec_id, const uint8_t *codec_data, int data_len)
 {
@@ -925,7 +929,10 @@ static int rtsp_new_rtp_connection(struct rtsp_client_connection *cc, int isaudi
              rtp->tcp_interleaved[0], rtp->tcp_interleaved[1]);
     } else {
         if (__rtp_udp_local_setup(rtp) < 0) {
-            free(rtp);
+            if(rtp){
+                free(rtp);
+                rtp = NULL;
+            }
             return -1;
         }
         rtp->udp_peerport[0] = peer_port;
@@ -965,6 +972,7 @@ static void rtsp_del_rtp_connection(struct rtsp_client_connection *cc, int isaud
             closesocket(rtp->udp_sockfd[1]);
         }
         free(rtp);
+        rtp = NULL;
     }
 }
 
@@ -1534,8 +1542,10 @@ int rtsp_do_event(rtsp_demo_handle demo)
                 if (ret == 0)
                     break;
                 if (ret < 0) {
-                    rtsp_del_client_connection(cc1);
-                    cc1 = NULL;
+                    if(cc1) {
+                        rtsp_del_client_connection(cc1);
+                        cc1 = NULL;
+                    }
                     break;
                 }
 
@@ -1569,7 +1579,8 @@ int rtsp_do_event(rtsp_demo_handle demo)
         if (cc1->state != RTSP_CC_STATE_PLAYING)
             continue;
 
-        if (vrtp && streamq_inused(s->vstreamq, vrtp->streamq_index) > 0) {
+        // rtsp_tx_video_packet && rtsp_tx_audio_packet not thread-safe
+        /* if (vrtp && streamq_inused(s->vstreamq, vrtp->streamq_index) > 0) {
             //send rtp video packet
             if (vrtp->is_over_tcp && FD_ISSET(vrtp->tcp_sockfd, &wfds)) {
                 rtsp_tx_video_packet(cc1);
@@ -1608,7 +1619,7 @@ int rtsp_do_event(rtsp_demo_handle demo)
             if (FD_ISSET(artp->udp_sockfd[1], &rfds)) {
                 rtsp_recv_rtcp_over_udp(cc1, 1);
             }
-        }
+        } */
     }
 
     return 1;
