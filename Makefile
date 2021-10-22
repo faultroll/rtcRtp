@@ -1,36 +1,46 @@
-# Hisilicon Hi3516 sample Makefile
 
-include ../Makefile.param
-#ifeq ($(SAMPLE_PARAM_FILE), )
-#     SAMPLE_PARAM_FILE:=../Makefile.param
-#     include $(SAMPLE_PARAM_FILE)
-#endif
-curdir = $(shell pwd)
+prfx   ?= 
+cc     := $(prfx)gcc
+cxx    := $(prfx)g++
+ar     := $(prfx)ar
+ranlib := $(prfx)ranlib
+strip  := $(prfx)strip
 
-SENSOR_LIBS += $(curdir)/rtsp_lib/librtsp.a
-CFLAGS += -I$(curdir)/rtsp_lib/
+# c version will be rtcthrd_c
+name    := rtspserver
+srcs    := utils.c stream_queue.c \
+           rtsp_msg.c rtp_enc.c \
+           rtsp_demo.c # $(wildcard *.c)
+objs    := $(patsubst %.c,%.o,$(filter %.c, $(srcs)))
+deps    := $(patsubst %.o,%.d,$(objs))
+libs    := -lpthread
+cflags   = -I. -DNDEBUG
+cflags  += -std=gnu11 -D_DEFAULT_SOURCE -D__LINUX__ -Wno-unused-parameter
+ldflags := 
+# for reproducible build
+objs    := $(sort $(objs))
+# cflags  += -Wno-builtin-macro-redefined -U__FILE__ -D__FILE__=\"$(notdir $<)\"
 
-# target source
-SRC  := $(wildcard *.c) 
-OBJ  := $(SRC:%.c=%.o)
+targets := lib$(name).so lib$(name).a
+all : $(targets)
 
-TARGET := $(OBJ:%.o=%)
-.PHONY : clean all
+clean : 
+	rm -f $(targets)
+	rm -f $(objs) $(deps)
 
-	
-	
-all: $(TARGET)
-	@cd rtsp_lib;   make
-$(TARGET):%:%.o $(COMM_OBJ)
-	$(CC) $(CFLAGS) -lpthread -lm -o $@ $^ $(MPI_LIBS) $(AUDIO_LIBA) $(SENSOR_LIBS)  $(INCFLAGS)
+lib$(name).so : $(objs)
+	@$(cc) -shared -Wl,--gc-sections -Wl,--as-needed -Wl,--export-dynamic $(ldflags) $^ -o $@ $(libs)
+	@$(strip) --strip-all $@
+	$(info $(cc) -shared $(notdir $^) -o $(notdir $@))
 
-clean:
-	@rm -f $(TARGET)
-	@rm -f $(OBJ)
-	@rm -f $(COMM_OBJ)
+lib$(name).a : $(objs)
+	@$(ar) -crD $@ $^
+	@$(ranlib) -D $@
+	@$(strip) --strip-unneeded $@
+	$(info $(ar) -crD $(notdir $@) $(notdir $^))
 
-cleanstream:
-	@rm -f *.h264
-	@rm -f *.jpg
-	@rm -f *.mjp
-	@rm -f *.mp4
+%.o : %.c
+	@$(cc) -Os -Wall -Wextra -std=c11 -fPIC $(cflags) -c $< -o $@ -MMD -MF $*.d -MP
+	$(info $(cc) -c $(notdir $<) -o $(notdir $@))
+
+-include $(deps)
