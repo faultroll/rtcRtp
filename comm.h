@@ -1,8 +1,8 @@
 /*************************************************************************
-	> File Name: comm.h
-	> Author: bxq
-	> Mail: 544177215@qq.com 
-	> Created Time: Sunday, December 20, 2015 AM07:37:50 CST
+    > File Name: comm.h
+    > Author: bxq
+    > Mail: 544177215@qq.com
+    > Created Time: Sunday, December 20, 2015 AM07:37:50 CST
  ************************************************************************/
 
 #ifndef __COMM_H__
@@ -16,22 +16,22 @@
 #define err(fmt, ...) do {printf("[ERROR %s:%d:%s] " fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__);} while(0)
 
 #ifdef __WIN32__
-#define FD_SETSIZE 1024
-//#include <windows.h>
-#include <winsock2.h>
-#define usleep(x) Sleep((x)/1000)
-#define snprintf _snprintf
+    #define FD_SETSIZE 1024
+    //#include <windows.h>
+    #include <winsock2.h>
+    #define usleep(x) Sleep((x)/1000)
+    #define snprintf _snprintf
 #endif
 
 #ifdef __LINUX__
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <time.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#endif 
+    #include <unistd.h>
+    #include <sys/types.h>
+    #include <sys/socket.h>
+    #include <sys/time.h>
+    #include <time.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+#endif
 
 #endif
 
