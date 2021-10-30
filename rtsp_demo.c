@@ -1374,7 +1374,9 @@ static int rtsp_tx_video_packet(struct rtsp_client_connection *cc)
         if (*ppktlen > 0) {
             *((uint32_t *)(&ppacket[8])) = htonl(rtp->ssrc); //modify ssrc
             if (rtp_tx_data(rtp, ppacket, *ppktlen) != *ppktlen) {
-                continue; // break;
+                // if it's over udp, we should |continue|, for its unreliable
+                // if it's over tcp, we should |break|, for its reliable and error occurs
+                break;
             }
 
             rtp->rtcp_packet_count ++;
@@ -1403,7 +1405,7 @@ static int rtsp_tx_audio_packet(struct rtsp_client_connection *cc)
         if (*ppktlen > 0) {
             *((uint32_t *)(&ppacket[8])) = htonl(rtp->ssrc); //modify ssrc
             if (rtp_tx_data(rtp, ppacket, *ppktlen) != *ppktlen) {
-                continue; // break;
+                break;
             }
 
             rtp->rtcp_packet_count ++;
