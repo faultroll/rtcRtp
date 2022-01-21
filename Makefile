@@ -6,8 +6,7 @@ ar     := $(prfx)ar
 ranlib := $(prfx)ranlib
 strip  := $(prfx)strip
 
-# c version will be rtcthrd_c
-name    := rtspserver
+name    := rtsp_server
 srcs    := utils.c stream_queue.c \
            rtsp_msg.c rtp_enc.c \
            rtsp_demo.c # $(wildcard *.c)
@@ -16,6 +15,7 @@ deps    := $(patsubst %.o,%.d,$(objs))
 libs    := -lpthread
 cflags   = -I. -DNDEBUG
 cflags  += -std=gnu11 -D_DEFAULT_SOURCE -D__LINUX__ -Wno-unused-parameter
+cflags  += # -Wno-maybe-uninitialized -Wno-sign-compare -Wno-strict-aliasing -Wno-type-limits
 ldflags := 
 # for reproducible build
 objs    := $(sort $(objs))
@@ -40,7 +40,7 @@ lib$(name).a : $(objs)
 	$(info $(ar) -crD $(notdir $@) $(notdir $^))
 
 %.o : %.c
-	@$(cc) -Os -Wall -Wextra -std=c11 -fPIC $(cflags) -c $< -o $@ -MMD -MF $*.d -MP
+	@$(cc) -Os -Wall -Wextra -std=c11 -fPIC -D_POSIX_C_SOURCE=200809L $(cflags) -c $< -o $@ -MMD -MF $*.d -MP
 	$(info $(cc) -c $(notdir $<) -o $(notdir $@))
 
 -include $(deps)
