@@ -1,0 +1,15 @@
+#include "RtspPlayer.hpp"
+
+using namespace rtc;
+
+int main(int argc, char **argv) {
+	RtspPlayer *player = new RtspPlayer();
+    
+    player->Play("rtsp://admin:@cetc5211@10.100.81.212:30000/Streaming/channels/000");
+    // player->Play("rtsp://admin:cetc5211@10.100.70.150:554/Streaming/channels/101");
+	getchar();
+    player->Stop();
+
+    delete player;
+	return 0;
+}

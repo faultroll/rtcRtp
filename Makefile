@@ -1,46 +1,45 @@
 
-prfx   ?= 
+dtop := ../..
+include $(dtop)/platform.conf
+ddist := ../dist/$(CHIP_TYPE)
+
+prfx   ?= $(TARGET)-
 cc     := $(prfx)gcc
 cxx    := $(prfx)g++
 ar     := $(prfx)ar
 ranlib := $(prfx)ranlib
 strip  := $(prfx)strip
 
-# c version will be rtcthrd_c
-name    := rtspserver
-srcs    := utils.c stream_queue.c \
-           rtsp_msg.c rtp_enc.c \
-           rtsp_demo.c # $(wildcard *.c)
-objs    := $(patsubst %.c,%.o,$(filter %.c, $(srcs)))
+srcs    := $(wildcard *.c) $(wildcard *.cpp)
+objs    := $(patsubst %.c,%.o,$(filter %.c, $(srcs))) \
+           $(patsubst %.cpp,%.o,$(filter %.cpp, $(srcs)))
 deps    := $(patsubst %.o,%.d,$(objs))
 libs    := -lpthread
-cflags   = -I. -DNDEBUG
-cflags  += -std=gnu11 -D_DEFAULT_SOURCE -D__LINUX__ -Wno-unused-parameter
-ldflags := 
+cflags   = -I. -D_DEFAULT_SOURCE -g
+cflags  += # -Wno-maybe-uninitialized -Wno-sign-compare -Wno-strict-aliasing -Wno-type-limits
 # for reproducible build
 objs    := $(sort $(objs))
 # cflags  += -Wno-builtin-macro-redefined -U__FILE__ -D__FILE__=\"$(notdir $<)\"
 
-targets := lib$(name).so lib$(name).a
+targets := $(ddist)/librtsp_client.a
 all : $(targets)
 
 clean : 
 	rm -f $(targets)
 	rm -f $(objs) $(deps)
 
-lib$(name).so : $(objs)
-	@$(cc) -shared -Wl,--gc-sections -Wl,--as-needed -Wl,--export-dynamic $(ldflags) $^ -o $@ $(libs)
-	@$(strip) --strip-all $@
-	$(info $(cc) -shared $(notdir $^) -o $(notdir $@))
-
-lib$(name).a : $(objs)
+$(ddist)/librtsp_client.a : $(objs)
 	@$(ar) -crD $@ $^
 	@$(ranlib) -D $@
 	@$(strip) --strip-unneeded $@
 	$(info $(ar) -crD $(notdir $@) $(notdir $^))
 
 %.o : %.c
-	@$(cc) -Os -Wall -Wextra -std=c11 -fPIC $(cflags) -c $< -o $@ -MMD -MF $*.d -MP
+	@$(cc) -Os -Wall -Wextra -std=c11 -fPIC -D_POSIX_C_SOURCE=200809L $(cflags) -c $< -o $@ -MMD -MF $*.d -MP
+	$(info $(cc) -c $(notdir $<) -o $(notdir $@))
+
+%.o : %.cpp
+	@$(cxx) -Os -Wall -Wextra -std=c++11 -fPIC $(cflags) -c $< -o $@ -MMD -MF $*.d -MP
 	$(info $(cc) -c $(notdir $<) -o $(notdir $@))
 
 -include $(deps)
